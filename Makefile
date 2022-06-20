@@ -1,21 +1,27 @@
-all : imprimir ejecutarServidor
+all : ejecutarServidor
 
 ejecutarCliente: compilarCliente cliente
 	./cliente
 
 compilarCliente: cliente.c
-	gcc cliente.c -o cliente -lm 
+	gcc cliente.c -o cliente
 
 
 compilaServidor: servidor.c
-	gcc servidor.c -o servidor -lm
+	gcc servidor.c -o servidor
 
 crearTerminal: compilarCliente
 	gnome-terminal -- ./cliente
 
 ejecutarServidor: compilaServidor crearTerminal servidor
 	./servidor
-imprimir:
-	
-clean:
+
+compilarIndexador: indexador.c
+	gcc indexador.c -o indexador
+
+ejecutarIndexador: indexador
+	./indexador
+clean: 
 	rm -r servidor cliente
+cleanIndexador: 
+	rm -r salidaHash salidaIndex indexador
