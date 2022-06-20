@@ -67,6 +67,7 @@ int hash(int x)
 
 int main(){
     FILE *lectura;
+    FILE *escritura;
     // Tamaño calcula el tamaño de los datos
     int tamanoBuff = sizeof(struct Datos);
     int cantidad = 0,r;
@@ -159,6 +160,13 @@ int main(){
             }
         }
 
+        //_________________________________________________________
+        if ((escritura= fopen("registro.log","wb+")) == NULL){
+            perror("No se pudo abrir alguno de los archivos\n");
+            exit(EXIT_FAILURE);
+        }
+        fwrite(bufferP,tamanoBuff,1,escritura);
+        fclose(escritura);
         //_________________________________________________________
         
         
