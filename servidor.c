@@ -104,8 +104,11 @@ int main(){
 
     // Configura el servidor y acepta los clientes
     configuracionServidor(&clientfd,&serverfd,&server,&client);
+    
+    //___________________________________________________
+    
     aceptarCliente(&clientfd,&serverfd,&client,tamano);
-
+    //___________________________________________________
     while (1)
     {    
         // Se reciben todos los datos
@@ -113,14 +116,13 @@ int main(){
             r = recv (clientfd,bufferP+cantidad,tamanoBuff,0);
             cantidad = cantidad+r;
         }
-        cantidad = 0;
         if (r < 0 ){
             perror("Error en recv");
             exit(-1);
         }
         
         printf("Cantidad de bytes recibidos %d i %d\n",cantidad,0);
-
+        cantidad = 0;
         printf("El origen: %d, el destino: %d, la hora: %d\n",bufferP->idOrigen,bufferP->idDestino,bufferP->hora);
         
 
@@ -140,9 +142,23 @@ int main(){
 
         fseek(lectura, hashOrigen * sizeof(struct index), SEEK_SET);
         fread(&indice, sizeof(struct index), 1, lectura);
-
+        
         if (indice.apuntador == -1)
-        {r = send(clientfd,bufferP+cantidad,tamanoBuff,0);exit(EXIT_FAILURE);
+        {
+            //     printf("No hay registros con idOrigen %d\n", origen);
+            bufferP->idOrigen = -1; // Indica que no se encontraron registros
+        }                           // else {
+        //     printf("El primer registro con idOrigen %d se encuentra en la posicion %ld del archivo indexado\n", indice.idOrigen, indice.apuntador);
+        // }
+
+        fclose(lectura);
+
+        // Busqueda del registro adecuado en el archivo indexado
+        if ((lectura = fopen("salidaIndex", "rb")) == NULL)
+        {
+            perror("Hubo un error leyendo el archivo index\n");
+
+            exit(EXIT_FAILURE);
         }
 
         if (bufferP->idOrigen != -1)
@@ -168,14 +184,15 @@ int main(){
                 // printf("Se encontro el registro %d %d %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
             }
         }
+        fclose(lectura);
 
         //_________________________________________________________
-        if ((escritura= fopen("registro.log","wb+")) == NULL){
-            perror("No se pudo abrir alguno de los archivos\n");
-            exit(EXIT_FAILURE);
-        }
-        fwrite(bufferP,tamanoBuff,1,escritura);
-        fclose(escritura);
+        // if ((escritura= fopen("registro.log","wb+")) == NULL){
+        //     perror("No se pudo abrir alguno de los archivos\n");
+        //     exit(EXIT_FAILURE);
+        // }
+        // fwrite(bufferP,tamanoBuff,1,escritura);
+        // fclose(escritura);
         //_________________________________________________________
         
         
