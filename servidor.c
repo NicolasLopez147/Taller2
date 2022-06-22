@@ -71,11 +71,75 @@ void aceptarCliente(int *clientfd, int* serverfd , struct sockaddr_in *client, i
     }
 }
 
-
 int hash(int x)
 {
     return x;
 }
+
+void buscarTiempoPormedio(struct Datos* bufferP, struct Datos buffer){
+    FILE *lectura;
+
+    int origen = bufferP->idOrigen;
+    int destino = bufferP->idDestino;
+    int hora = bufferP->hora;
+
+    if ((lectura = fopen("salidaHash", "rb")) == NULL)
+    {
+        perror("Hubo un error leyendo el archivo hash\n");
+        exit(EXIT_FAILURE);
+    }
+
+    struct index indice;
+    int hashOrigen = hash(origen);
+
+    fseek(lectura, hashOrigen * sizeof(struct index), SEEK_SET);
+    fread(&indice, sizeof(struct index), 1, lectura);
+    
+    if (indice.apuntador == -1)
+    {
+        //     printf("No hay registros con idOrigen %d\n", origen);
+        bufferP->idOrigen = -1; // Indica que no se encontraron registros
+    }                           // else {
+    //     printf("El primer registro con idOrigen %d se encuentra en la posicion %ld del archivo indexado\n", indice.idOrigen, indice.apuntador);
+    // }
+
+    fclose(lectura);
+
+    // Busqueda del registro adecuado en el archivo indexado
+    if ((lectura = fopen("salidaIndex", "rb")) == NULL)
+    {
+        perror("Hubo un error leyendo el archivo index\n");
+
+        exit(EXIT_FAILURE);
+    }
+
+    if (bufferP->idOrigen != -1)
+    {
+        fseek(lectura, (indice.apuntador - 1) * sizeof(struct Datos), SEEK_SET);
+        fread(&buffer, sizeof(struct Datos), 1, lectura);
+
+        // printf("Se encontro el registro %d %d %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
+
+        while ((bufferP->idOrigen != origen) || (bufferP->idDestino != destino) || (bufferP->hora != hora))
+        {
+            if (bufferP->sig == -1)
+            {
+                printf("No hay registros con los parametros indicados\n");
+                bufferP->idOrigen = -1; // Indica que no se encontraron registros
+                break;
+            }
+
+            // Leer registro siguiente
+            fseek(lectura, (bufferP->sig - 1) * sizeof(struct Datos), SEEK_SET);
+            fread(&buffer, sizeof(struct Datos), 1, lectura);
+
+            // printf("Se encontro el registro %d %d %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
+        }
+    }
+    bufferP = &buffer;
+    fclose(lectura);
+}
+
 
 int main(){
 
@@ -84,12 +148,13 @@ int main(){
     // Tamaño de una estructura sockaddr_in
     socklen_t tamano = sizeof(client);
 
-    // Arreglo con los descriptores de los hilos y los parametros de la funcion 
-    pthread_t hilo[BACKLOG] ;
-    struct Parametros datosh[BACKLOG];
+    fd_set readfds;
+    int maximo;
 
-    FILE *lectura;
-    FILE *escritura;
+    // Arreglo con los descriptores de los hilos y los parametros de la funcion 
+    int clientes[BACKLOG] ;
+
+    
     // Tamaño calcula el tamaño de los datos
     int tamanoBuff = sizeof(struct Datos);
     int cantidad = 0,r;
@@ -104,113 +169,156 @@ int main(){
 
     // Configura el servidor y acepta los clientes
     configuracionServidor(&clientfd,&serverfd,&server,&client);
-    
-    //___________________________________________________
-    
-    aceptarCliente(&clientfd,&serverfd,&client,tamano);
-    //___________________________________________________
+
+    for (int i = 0 ; i < BACKLOG ; i ++){
+        clientes[i] = 0;
+    }
     while (1)
-    {    
-        // Se reciben todos los datos
-        while (cantidad < tamanoBuff){
-            r = recv (clientfd,bufferP+cantidad,tamanoBuff,0);
-            cantidad = cantidad+r;
+    {
+        //Limpia el socket set
+        FD_ZERO(&readfds);
+
+        // Agrega el servidor al set
+        FD_SET(serverfd,&readfds);
+        maximo = serverfd;
+
+        for ( int i = 0 ; i < BACKLOG ; i++){
+            int descriptor = clientes[i];
+            
+            // Si es un descriptor lo añade a la lista de lectura
+            if (descriptor > 0)
+                FD_SET(descriptor , &readfds);
+            
+            // Maximo es el valor mayor de los descriptores 
+            if (descriptor > maximo)
+                maximo = descriptor;
         }
-        if (r < 0 ){
-            perror("Error en recv");
+        
+        // Espera alguna actividad de algun socket
+        r = select(maximo+1,&readfds , NULL, NULL, NULL);
+        if (r < 0){
+            perror("Error en select\n");
             exit(-1);
         }
-        
-        printf("Cantidad de bytes recibidos %d i %d\n",cantidad,0);
-        cantidad = 0;
-        printf("El origen: %d, el destino: %d, la hora: %d\n",bufferP->idOrigen,bufferP->idDestino,bufferP->hora);
-        
 
-        //_________________________________________________________
-        int origen = bufferP->idOrigen;
-        int destino = bufferP->idDestino;
-        int hora = bufferP->hora;
+        // Cuando un cliente se quiere conectar
+        if (FD_ISSET(serverfd,&readfds)){
+            aceptarCliente(&clientfd,&serverfd,&client,tamano);
 
-        if ((lectura = fopen("salidaHash", "rb")) == NULL)
-        {
-            perror("Hubo un error leyendo el archivo hash\n");
-            exit(EXIT_FAILURE);
-        }
-
-        struct index indice;
-        int hashOrigen = hash(origen);
-
-        fseek(lectura, hashOrigen * sizeof(struct index), SEEK_SET);
-        fread(&indice, sizeof(struct index), 1, lectura);
-        
-        if (indice.apuntador == -1)
-        {
-            //     printf("No hay registros con idOrigen %d\n", origen);
-            bufferP->idOrigen = -1; // Indica que no se encontraron registros
-        }                           // else {
-        //     printf("El primer registro con idOrigen %d se encuentra en la posicion %ld del archivo indexado\n", indice.idOrigen, indice.apuntador);
-        // }
-
-        fclose(lectura);
-
-        // Busqueda del registro adecuado en el archivo indexado
-        if ((lectura = fopen("salidaIndex", "rb")) == NULL)
-        {
-            perror("Hubo un error leyendo el archivo index\n");
-
-            exit(EXIT_FAILURE);
-        }
-
-        if (bufferP->idOrigen != -1)
-        {
-            fseek(lectura, (indice.apuntador - 1) * sizeof(struct Datos), SEEK_SET);
-            fread(&buffer, sizeof(struct Datos), 1, lectura);
-
-            // printf("Se encontro el registro %d %d %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
-
-            while ((bufferP->idOrigen != origen) || (bufferP->idDestino != destino) || (bufferP->hora != hora))
-            {
-                if (bufferP->sig == -1)
-                {
-                    printf("No hay registros con los parametros indicados\n");
-                    bufferP->idOrigen = -1; // Indica que no se encontraron registros
+            for (int i = 0 ; i < BACKLOG ; i ++){
+                if (clientes [i] == 0){
+                    clientes[i] = clientfd;
                     break;
                 }
-
-                // Leer registro siguiente
-                fseek(lectura, (bufferP->sig - 1) * sizeof(struct Datos), SEEK_SET);
-                fread(&buffer, sizeof(struct Datos), 1, lectura);
-
-                // printf("Se encontro el registro %d %d %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
             }
         }
-        fclose(lectura);
 
-        //_________________________________________________________
-        // if ((escritura= fopen("registro.log","wb+")) == NULL){
-        //     perror("No se pudo abrir alguno de los archivos\n");
-        //     exit(EXIT_FAILURE);
-        // }
-        // fwrite(bufferP,tamanoBuff,1,escritura);
-        // fclose(escritura);
-        //_________________________________________________________
-        
-        
-        // Se envia el tiempo promedio
-        while (cantidad < tamanoBuff){
-            r = send(clientfd,bufferP+cantidad,tamanoBuff,0);
-            cantidad = cantidad+r;
+        // Cuando un cliente ya conectado hace otra peticion
+
+        for (int i = 0 ; i < BACKLOG ; i ++){
+            int descriptor = clientes[i];
+            if (FD_ISSET(descriptor,&readfds)){
+
+                // Se reciben todos los datos
+                while (cantidad < tamanoBuff){
+                    r = recv (descriptor,bufferP+cantidad,tamanoBuff,0);
+                    cantidad = cantidad+r;
+                }
+                if (r < 0 ){
+                    perror("Error en recv");
+                    getpeername(descriptor,(struct sockaddr*)&server,(socklen_t*)&server);
+                    close(descriptor);
+                    clientes[i] = 0;
+                }
+                
+                printf("Cantidad de bytes recibidos %d i %d\n",cantidad,0);
+                cantidad = 0;
+                printf("El origen: %d, el destino: %d, la hora: %d\n",bufferP->idOrigen,bufferP->idDestino,bufferP->hora);
+                
+
+                //_________________________________________________________
+                // buscarTiempoPormedio(bufferP,buffer);
+
+                FILE *lectura;
+
+                int origen = bufferP->idOrigen;
+                int destino = bufferP->idDestino;
+                int hora = bufferP->hora;
+
+                if ((lectura = fopen("salidaHash", "rb")) == NULL)
+                {
+                    perror("Hubo un error leyendo el archivo hash\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                struct index indice;
+                int hashOrigen = hash(origen);
+
+                fseek(lectura, hashOrigen * sizeof(struct index), SEEK_SET);
+                fread(&indice, sizeof(struct index), 1, lectura);
+                
+                if (indice.apuntador == -1)
+                {
+                    //     printf("No hay registros con idOrigen %d\n", origen);
+                    bufferP->idOrigen = -1; // Indica que no se encontraron registros
+                }                           // else {
+                //     printf("El primer registro con idOrigen %d se encuentra en la posicion %ld del archivo indexado\n", indice.idOrigen, indice.apuntador);
+                // }
+
+                fclose(lectura);
+
+                // Busqueda del registro adecuado en el archivo indexado
+                if ((lectura = fopen("salidaIndex", "rb")) == NULL)
+                {
+                    perror("Hubo un error leyendo el archivo index\n");
+
+                    exit(EXIT_FAILURE);
+                }
+
+                if (bufferP->idOrigen != -1)
+                {
+                    fseek(lectura, (indice.apuntador - 1) * sizeof(struct Datos), SEEK_SET);
+                    fread(&buffer, sizeof(struct Datos), 1, lectura);
+
+                    // printf("Se encontro el registro %d %d %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
+
+                    while ((bufferP->idOrigen != origen) || (bufferP->idDestino != destino) || (bufferP->hora != hora))
+                    {
+                        if (bufferP->sig == -1)
+                        {
+                            printf("No hay registros con los parametros indicados\n");
+                            bufferP->idOrigen = -1; // Indica que no se encontraron registros
+                            break;
+                        }
+
+                        // Leer registro siguiente
+                        fseek(lectura, (bufferP->sig - 1) * sizeof(struct Datos), SEEK_SET);
+                        fread(&buffer, sizeof(struct Datos), 1, lectura);
+
+                        // printf("Se encontro el registro %d %d %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
+                    }
+                }
+                bufferP = &buffer;
+                fclose(lectura);
+                printf("TIempo de viaje medio encontrado fue de %f\n",bufferP->mediaViaje);
+                
+                //_________________________________________________________
+                
+                // Se envia el tiempo promedio
+                while (cantidad < tamanoBuff){
+                    r = send(clientfd,bufferP+cantidad,tamanoBuff,0);
+                    cantidad = cantidad+r;
+                }
+                cantidad = 0;
+                if (r < 0 ){
+                perror("Error en send");
+                exit(-1);
+                }
+            }
         }
-        cantidad = 0;
-        if (r < 0 ){
-           perror("Error en send");
-           exit(-1);
-        }
-        
-        // Se cierra ambos sockets
-        
-        printf("Todo resulto bien\n");
     }
+
+    // Se cierra ambos sockets
     close(clientfd);
     close(serverfd);
     
