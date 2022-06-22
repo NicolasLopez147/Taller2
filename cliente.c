@@ -60,6 +60,16 @@ int main(){
     do{
         r =connect(clientefd,(struct sockaddr *)&client,(socklen_t)sizeof(struct sockaddr));
     }while(r < 0);
+
+    char confirmacion[3];
+    r = recv(clientefd,confirmacion,2,0);
+    confirmacion[3] = 0;
+    
+    printf("Mensaje coneccion con el servidor %s\n",confirmacion);
+    if (confirmacion[0] == 'N'){
+        exit(-1);
+    }
+    
     
     datos.idOrigen = 123;
     datos.idDestino = 2;

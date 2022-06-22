@@ -9,20 +9,21 @@
 #include <sys/socket.h>
 #include <string.h>
 
-#include <time.h>
+#include <pthread.h>
 
 #include "datos.h"
 // Se define el puerto y el tamaño maximo de la cola de conecciones
 #define PORT 3536
-#define BACKLOG 35
+#define BACKLOG 32
 
-int configuracionServidor(int *clientfd, int* serverfd){
+
+void configuracionServidor(int *clientfd, int* serverfd,struct sockaddr_in *serverP, struct sockaddr_in *client){
     // Parametro de setsockopt
     int r ,opt = 1;
-    // EStructuras de configuracion de servidor y cliente
-    struct sockaddr_in server,client;
-    // Tamaño de una estructura sockaddr_in
-    socklen_t tamano = sizeof(client);
+
+    struct sockaddr_in server;
+    serverP = &server;
+    
 
     // Se crea el socket servidor
     *serverfd = socket(AF_INET,SOCK_STREAM,0);
@@ -51,10 +52,21 @@ int configuracionServidor(int *clientfd, int* serverfd){
         perror("Error en LISTEN");
         exit(-1);
     }
+    
+}
+
+void aceptarCliente(int *clientfd, int* serverfd , struct sockaddr_in *client, int tamano){
+    
     //Acepta a un cliente y lo guarda en la estructura cliente
     *clientfd = accept(*serverfd, (struct sockaddr *)&client, &tamano);
     if (*clientfd < 0){
         perror("Error en el accept");
+        exit(-1);
+    }
+    int r;
+    r = send(*clientfd,"OK",2,0);
+    if (r < 0 ){
+        perror("Error en send");
         exit(-1);
     }
 }
@@ -66,6 +78,16 @@ int hash(int x)
 }
 
 int main(){
+
+    // Estructuras de configuracion de servidor y cliente
+    struct sockaddr_in server,client;
+    // Tamaño de una estructura sockaddr_in
+    socklen_t tamano = sizeof(client);
+
+    // Arreglo con los descriptores de los hilos y los parametros de la funcion 
+    pthread_t hilo[BACKLOG] ;
+    struct Parametros datosh[BACKLOG];
+
     FILE *lectura;
     FILE *escritura;
     // Tamaño calcula el tamaño de los datos
@@ -81,7 +103,8 @@ int main(){
     bufferP = &buffer;
 
     // Configura el servidor y acepta los clientes
-    configuracionServidor(&clientfd,&serverfd);
+    configuracionServidor(&clientfd,&serverfd,&server,&client);
+    aceptarCliente(&clientfd,&serverfd,&client,tamano);
 
     while (1)
     {    
@@ -119,21 +142,7 @@ int main(){
         fread(&indice, sizeof(struct index), 1, lectura);
 
         if (indice.apuntador == -1)
-        {
-            //     printf("No hay registros con idOrigen %d\n", origen);
-            bufferP->idOrigen = -1; // Indica que no se encontraron registros
-        }                           // else {
-        //     printf("El primer registro con idOrigen %d se encuentra en la posicion %ld del archivo indexado\n", indice.idOrigen, indice.apuntador);
-        // }
-
-        fclose(lectura);
-
-        // Busqueda del registro adecuado en el archivo indexado
-        if ((lectura = fopen("salidaIndex", "rb")) == NULL)
-        {
-            perror("Hubo un error leyendo el archivo index\n");
-
-            exit(EXIT_FAILURE);
+        {r = send(clientfd,bufferP+cantidad,tamanoBuff,0);exit(EXIT_FAILURE);
         }
 
         if (bufferP->idOrigen != -1)

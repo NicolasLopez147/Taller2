@@ -4,6 +4,18 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <unistd.h> 
+#include <stdio.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <string.h>
+
+
 // Los datos que tiene cada registro
 struct Datos
 {
@@ -23,3 +35,11 @@ struct index
     long apuntador;
 };
 
+// Parametos de la funcion aceptarCliente
+struct Parametros
+{
+    int *clientfd;
+    int *serverfd;
+    struct sockaddr_in *client;
+    int tamano;
+};
