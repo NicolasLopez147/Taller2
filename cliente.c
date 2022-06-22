@@ -35,9 +35,7 @@ int formatoHora(int *hora)
 }
 
 int main(){
-    // Crea una estructura que guardara los datos
-    struct Datos datos;
-    struct Datos *buffer = &datos;
+
     // Tamaño calcula el tamaño de los datos
     int tamano = sizeof(struct Datos);
 
@@ -70,14 +68,14 @@ int main(){
         exit(-1);
     }
     
-    
-    datos.idOrigen = 123;
-    datos.idDestino = 2;
-    datos.hora = 3;
     int cantidad = 0,opc = 0;
 
     do
     {
+        // Crea una estructura que guardara los datos
+        struct Datos datos;
+        struct Datos *buffer = &datos;
+        
         printf("Bienvenido\n\n");
         printf("1. Ingresar origen\n");
         printf("2. Ingresar destino\n");
