@@ -130,7 +130,7 @@ void buscarTiempoPormedio(struct Datos *bufferP, struct Datos *buffer)
         {
             if (bufferP->sig == -1)
             {
-                printf("No hay registros con los parametros indicados\n");
+                //printf("No hay registros con los parametros indicados\n");
                 bufferP->idOrigen = -1; // Indica que no se encontraron registros
                 break;
             }
@@ -197,14 +197,14 @@ int main()
                 }
                 if (r <= 0)
                 {
-                    perror("Error en recv");
+                    //perror("Error en recv");
                     // printf("Cerrando el cliente con ip %s",client.sin_addr.s_addr);
                     break;
                 }
 
-                printf("Cantidad de bytes recibidos %d i %d\n", cantidad, 0);
+                //printf("Cantidad de bytes recibidos %d i %d\n", cantidad, 0);
                 cantidad = 0;
-                printf("El origen: %d, el destino: %d, la hora: %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
+                //printf("El origen: %d, el destino: %d, la hora: %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
 
                 //_________________________________________________________
                 // Se busca el tiempo promedio
@@ -224,6 +224,7 @@ int main()
                     exit(-1);
                 }
             }
+            kill(getpid(),SIGKILL);
         }
     }
 
