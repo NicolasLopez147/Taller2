@@ -36,6 +36,7 @@ int formatoHora(int *hora)
 
 int main(){
 
+    char a;
     // Tamaño calcula el tamaño de los datos
     int tamano = sizeof(struct Datos);
 
@@ -50,15 +51,18 @@ int main(){
         perror("Error creando el socket\n");
         exit(-1);
     }
+
     // Se configura el cliente
     client.sin_family = AF_INET;
     client.sin_port = htons(PORT);
     inet_aton(IP,&client.sin_addr);
+
     // Espera a que el servidor este listo para poder conectarse
     do{
         r =connect(clientefd,(struct sockaddr *)&client,(socklen_t)sizeof(struct sockaddr));
     }while(r < 0);
 
+    // Envia una confirmacion de la coneccion con el servidor
     char confirmacion[3];
     r = recv(clientefd,confirmacion,2,0);
     confirmacion[3] = 0;
@@ -67,6 +71,9 @@ int main(){
     if (confirmacion[0] == 'N'){
         exit(-1);
     }
+    printf("Oprima cualquier tecla para continuar\n");
+    scanf("%s",&a);
+
     
     int cantidad = 0,opc = 0;
 
@@ -114,7 +121,7 @@ int main(){
 
         case 4:
 
-            // Se reciven todos los datos
+            // Se envian todos los datos para hacer la consulta
             while (cantidad < tamano){
                 
                 r = send(clientefd,buffer+cantidad,tamano,0);
@@ -125,15 +132,24 @@ int main(){
                 perror("Error en send\n");
                 exit(-1);
             }
-            printf("Bytes enviados %d iteracion %d\n",cantidad,1);
-            // Se envia la confirmacion de que se recibieron todos los datos
-            
-            // char confirmacion [3];
+            // printf("Bytes enviados %d iteracion %d\n",cantidad,1);
+            // Se reciben los datos del servidor
             while (cantidad < tamano){
-                printf("Hola mundo");
                 r = recv(clientefd,buffer+cantidad,tamano,0);
                 cantidad = cantidad+r;
             }
+            //Se conprueba la consulta
+            if (cantidad == tamano){
+                printf("Resultado consulta recibido correctamente\n");
+                printf("Oprima cualquier tecla para continuar\n");
+                scanf("%s",&a);
+            }else{
+                printf("La consulta no se recibio correctamente\n");
+                printf("Oprima cualquier tecla para continuar\n");
+                scanf("%s",&a);
+                exit(-1);
+            }
+            
             cantidad = 0;
             if (r < 0 ){
                 perror("Error en recv");
@@ -152,10 +168,6 @@ int main(){
 
         case 5:
             printf("Adios\n");
-            // ELimina el archivo FIFO
-            // unlink(tuberia);
-            // unlink(tuberia2);
-
             // Se cierra el socket
             close(clientefd);
             break;

@@ -21,6 +21,7 @@ void configuracionServidor(int *clientfd, int* serverfd,struct sockaddr_in *serv
     // Parametro de setsockopt
     int r ,opt = 1;
 
+    
     struct sockaddr_in server;
     serverP = &server;
     
@@ -64,6 +65,7 @@ void aceptarCliente(int *clientfd, int* serverfd , struct sockaddr_in *client, i
         exit(-1);
     }
     int r;
+    // Se envia una confirmacion al cliente de que la coneccion fue exitosa
     r = send(*clientfd,"OK",2,0);
     if (r < 0 ){
         perror("Error en send");
@@ -155,14 +157,8 @@ int main(){
     // Tamaño de una estructura sockaddr_in
     socklen_t tamano = sizeof(client);
     
+    // Id del hijo
     pid_t hijoId;
-    fd_set readfds;
-    int maximo;
-    int numeroHIlos = 0;
-    pthread_t hilos[BACKLOG];
-
-    // Arreglo con los descriptores de los hilos y los parametros de la funcion 
-    int clientes[BACKLOG] ;
 
     
     // Tamaño calcula el tamaño de los datos
@@ -180,145 +176,51 @@ int main(){
     // Configura el servidor y acepta los clientes
     configuracionServidor(&clientfd,&serverfd,&server,&client);
 
-    for (int i = 0 ; i < BACKLOG ; i ++){
-        clientes[i] = 0;
-    }
-    // while (1)
-    // {
-        // //Limpia el socket set
-        // FD_ZERO(&readfds);
-
-        // Agrega el servidor al set
-        // FD_SET(serverfd,&readfds);
-        // maximo = serverfd;
-
-        // for ( int i = 0 ; i < BACKLOG ; i++){
-        //     int descriptor = clientes[i];
-            
-        //     // Si es un descriptor lo añade a la lista de lectura
-        //     if (descriptor > 0)
-        //         FD_SET(descriptor , &readfds);
-            
-        //     // Maximo es el valor mayor de los descriptores 
-        //     if (descriptor > maximo)
-        //         maximo = descriptor;
-        // }
-        
-        // Espera alguna actividad de algun socket
-        // r = select(maximo+1,&readfds , NULL, NULL, NULL);
-        // if (r < 0){
-        //     perror("Error en select\n");
-        //     exit(-1);
-        // }
-
-        while (1)
-        {
-            aceptarCliente(&clientfd,&serverfd,&client,tamano);
-            if (hijoId = fork()== 0){
-                while (1)
-                {
-                    // Se reciben todos los datos
-                    while (cantidad < tamanoBuff){
-                        r = read (clientfd,bufferP+cantidad,tamanoBuff);
-                        cantidad = cantidad+r;
-                        if (r == 0){
-                            break;
-                        }
-                    }
-                    if (r <= 0 ){
-                        perror("Error en recv");
-                        // printf("Cerrando el cliente con ip %s",client.sin_addr.s_addr);
+    while (1)
+    {
+        // Acepta al cliente y le manda un mensaje de confirmacion
+        aceptarCliente(&clientfd,&serverfd,&client,tamano);
+        if (hijoId = fork()== 0){ // Se crea un hijo que atendera al cliente hasta que se cierre la coneccion
+            while (1)
+            {
+                // Se reciben todos los datos
+                while (cantidad < tamanoBuff){
+                    r = read (clientfd,bufferP+cantidad,tamanoBuff);
+                    cantidad = cantidad+r;
+                    if (r == 0){
                         break;
                     }
-                    
-                    printf("Cantidad de bytes recibidos %d i %d\n",cantidad,0);
-                    cantidad = 0;
-                    printf("El origen: %d, el destino: %d, la hora: %d\n",bufferP->idOrigen,bufferP->idDestino,bufferP->hora);
-                    
+                }
+                if (r <= 0 ){
+                    perror("Error en recv");
+                    // printf("Cerrando el cliente con ip %s",client.sin_addr.s_addr);
+                    break;
+                }
+                
+                printf("Cantidad de bytes recibidos %d i %d\n",cantidad,0);
+                cantidad = 0;
+                printf("El origen: %d, el destino: %d, la hora: %d\n",bufferP->idOrigen,bufferP->idDestino,bufferP->hora);
+                
 
-                    //_________________________________________________________
-                    buscarTiempoPormedio(bufferP,&buffer);
-
-                    
-                    //_________________________________________________________
-                    
-                    // Se envia el tiempo promedio
-                    while (cantidad < tamanoBuff){
-                        r = send(clientfd,bufferP+cantidad,tamanoBuff,0);
-                        cantidad = cantidad+r;
-                    }
-                    cantidad = 0;
-                    if (r < 0 ){
-                        perror("Error en send");
-                        exit(-1);
-                    }
+                //_________________________________________________________
+                // Se busca el tiempo promedio
+                buscarTiempoPormedio(bufferP,&buffer);
+                //_________________________________________________________
+                
+                // Se envia el tiempo promedio
+                while (cantidad < tamanoBuff){
+                    r = send(clientfd,bufferP+cantidad,tamanoBuff,0);
+                    cantidad = cantidad+r;
+                }
+                cantidad = 0;
+                if (r < 0 ){
+                    perror("Error en send");
+                    exit(-1);
                 }
             }
         }
+    }
         
-
-        // // Cuando un cliente se quiere conectar
-        // if (FD_ISSET(serverfd,&readfds)){
-        //     aceptarCliente(&clientfd,&serverfd,&client,tamano);
-
-        //     for (int i = 0 ; i < BACKLOG ; i ++){
-        //         if (clientes [i] == 0){
-        //             clientes[i] = clientfd;
-        //             break;
-        //         }
-        //     }
-        // }
-
-
-
-
-        
-        // Cuando un cliente ya conectado hace otra peticion
-
-        // for (int i = 0 ; i < BACKLOG ; i ++){
-        //     int descriptor = clientes[i];
-        //     if (FD_ISSET(descriptor,&readfds)){
-
-        //         // Se reciben todos los datos
-        //         while (cantidad < tamanoBuff){
-        //             r = read (descriptor,bufferP+cantidad,tamanoBuff);
-        //             cantidad = cantidad+r;
-        //             if (r == 0){
-        //                 break;
-        //             }
-        //         }
-        //         if (r <= 0 ){
-        //             perror("Error en recv");
-        //             getpeername(descriptor,(struct sockaddr*)&server,(socklen_t*)&server);
-        //             close(descriptor);
-        //             clientes[i] = 0;
-        //         }
-                
-        //         printf("Cantidad de bytes recibidos %d i %d\n",cantidad,0);
-        //         cantidad = 0;
-        //         printf("El origen: %d, el destino: %d, la hora: %d\n",bufferP->idOrigen,bufferP->idDestino,bufferP->hora);
-                
-
-        //         //_________________________________________________________
-        //         buscarTiempoPormedio(bufferP,&buffer);
-
-                
-        //         //_________________________________________________________
-                
-        //         // Se envia el tiempo promedio
-        //         while (cantidad < tamanoBuff){
-        //             r = send(clientfd,bufferP+cantidad,tamanoBuff,0);
-        //             cantidad = cantidad+r;
-        //         }
-        //         cantidad = 0;
-        //         if (r < 0 ){
-        //         perror("Error en send");
-        //         exit(-1);
-        //         }
-        //     }
-        // }
-    // }
-
     // Se cierra ambos sockets
     close(clientfd);
     close(serverfd);
