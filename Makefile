@@ -19,7 +19,7 @@ ejecutarServidor: compilaServidor crearTerminal servidor
 compilarIndexador: indexador.c
 	gcc indexador.c -o indexador
 
-ejecutarIndexador: indexador
+ejecutarIndexador: compilarIndexador indexador
 	./indexador
 clean: 
 	rm -r servidor cliente
