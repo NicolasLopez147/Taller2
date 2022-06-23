@@ -1,6 +1,6 @@
 #include <netinet/in.h>
 #include <stdlib.h>
-#include <unistd.h> 
+#include <unistd.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -34,7 +34,8 @@ int formatoHora(int *hora)
     }
 }
 
-int main(){
+int main()
+{
 
     char a;
     // Tamaño calcula el tamaño de los datos
@@ -44,10 +45,11 @@ int main(){
     int clientefd, r;
     // EStructuras de configuracion de cliente
     struct sockaddr_in client;
-    
+
     // Se crea el socket cliente
-    clientefd = socket(AF_INET,SOCK_STREAM,0);
-    if (clientefd < 0){
+    clientefd = socket(AF_INET, SOCK_STREAM, 0);
+    if (clientefd < 0)
+    {
         perror("Error creando el socket\n");
         exit(-1);
     }
@@ -55,27 +57,28 @@ int main(){
     // Se configura el cliente
     client.sin_family = AF_INET;
     client.sin_port = htons(PORT);
-    inet_aton(IP,&client.sin_addr);
+    inet_aton(IP, &client.sin_addr);
 
     // Espera a que el servidor este listo para poder conectarse
-    do{
-        r =connect(clientefd,(struct sockaddr *)&client,(socklen_t)sizeof(struct sockaddr));
-    }while(r < 0);
+    do
+    {
+        r = connect(clientefd, (struct sockaddr *)&client, (socklen_t)sizeof(struct sockaddr));
+    } while (r < 0);
 
     // Envia una confirmacion de la coneccion con el servidor
     char confirmacion[3];
-    r = recv(clientefd,confirmacion,2,0);
+    r = recv(clientefd, confirmacion, 2, 0);
     confirmacion[3] = 0;
-    
-    printf("Mensaje coneccion con el servidor %s\n",confirmacion);
-    if (confirmacion[0] == 'N'){
+
+    printf("Mensaje coneccion con el servidor %s\n", confirmacion);
+    if (confirmacion[0] == 'N')
+    {
         exit(-1);
     }
     printf("Oprima cualquier tecla para continuar\n");
-    scanf("%s",&a);
+    scanf("%s", &a);
 
-    
-    int cantidad = 0,opc = 0;
+    int cantidad = 0, opc = 0;
 
     do
     {
@@ -122,36 +125,43 @@ int main(){
         case 4:
 
             // Se envian todos los datos para hacer la consulta
-            while (cantidad < tamano){
-                
-                r = send(clientefd,buffer+cantidad,tamano,0);
+            while (cantidad < tamano)
+            {
+
+                r = send(clientefd, buffer + cantidad, tamano, 0);
                 cantidad = cantidad + r;
             }
             cantidad = 0;
-            if (r < 0){
+            if (r < 0)
+            {
                 perror("Error en send\n");
                 exit(-1);
             }
             // printf("Bytes enviados %d iteracion %d\n",cantidad,1);
             // Se reciben los datos del servidor
-            while (cantidad < tamano){
-                r = recv(clientefd,buffer+cantidad,tamano,0);
-                cantidad = cantidad+r;
+            while (cantidad < tamano)
+            {
+                r = recv(clientefd, buffer + cantidad, tamano, 0);
+                cantidad = cantidad + r;
             }
-            //Se conprueba la consulta
-            if (cantidad == tamano){
+            // Se conprueba la consulta
+            if (cantidad == tamano)
+            {
                 printf("Resultado consulta recibido correctamente\n");
                 printf("Oprima cualquier tecla para continuar\n");
-                scanf("%s",&a);
-            }else{
+                scanf("%s", &a);
+            }
+            else
+            {
                 printf("La consulta no se recibio correctamente\n");
                 printf("Oprima cualquier tecla para continuar\n");
-                scanf("%s",&a);
+                scanf("%s", &a);
                 exit(-1);
             }
-            
+
             cantidad = 0;
-            if (r < 0 ){
+            if (r < 0)
+            {
                 perror("Error en recv");
                 exit(-1);
             }
@@ -178,5 +188,4 @@ int main(){
         }
 
     } while (opc != 5);
-
 }

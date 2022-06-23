@@ -6,7 +6,7 @@
 
 #include <netinet/in.h>
 #include <stdlib.h>
-#include <unistd.h> 
+#include <unistd.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -14,7 +14,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
-
 
 // Los datos que tiene cada registro
 struct Datos
@@ -35,7 +34,7 @@ struct index
     long apuntador;
 };
 
-// Parametos de la funcion aceptarCliente
+// Parametos de la funcion ejecutada por el hilo
 struct Parametros
 {
     int *clientfd;
