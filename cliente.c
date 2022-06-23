@@ -75,7 +75,7 @@ int main(){
         // Crea una estructura que guardara los datos
         struct Datos datos;
         struct Datos *buffer = &datos;
-        
+
         printf("Bienvenido\n\n");
         printf("1. Ingresar origen\n");
         printf("2. Ingresar destino\n");
@@ -116,6 +116,7 @@ int main(){
 
             // Se reciven todos los datos
             while (cantidad < tamano){
+                
                 r = send(clientefd,buffer+cantidad,tamano,0);
                 cantidad = cantidad + r;
             }
@@ -129,6 +130,7 @@ int main(){
             
             // char confirmacion [3];
             while (cantidad < tamano){
+                printf("Hola mundo");
                 r = recv(clientefd,buffer+cantidad,tamano,0);
                 cantidad = cantidad+r;
             }
