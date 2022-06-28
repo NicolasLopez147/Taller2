@@ -7,17 +7,22 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <signal.h>
 #include <string.h>
+#include <time.h>
 
 #include <pthread.h>
-
 #include "datos.h"
+
 // Se define el puerto y el tamaño maximo de la cola de conecciones
 #define PORT 3536
 #define BACKLOG 32
 
+pthread_mutex_t logLock;
+
 void configuracionServidor(int *clientfd, int *serverfd, struct sockaddr_in *serverP, struct sockaddr_in *client)
 {
+    
     // Parametro de setsockopt
     int r, opt = 1;
 
@@ -81,13 +86,15 @@ int hash(int x)
     return x;
 }
 
-void buscarTiempoPormedio(struct Datos *bufferP, struct Datos *buffer)
+void buscarTiempoPromedio(struct Datos *bufferP, struct Datos *buffer)
 {
     FILE *lectura;
 
     int origen = bufferP->idOrigen;
     int destino = bufferP->idDestino;
     int hora = bufferP->hora;
+
+    int validacion = 0;
 
     if ((lectura = fopen("salidaHash", "rb")) == NULL)
     {
@@ -104,7 +111,7 @@ void buscarTiempoPormedio(struct Datos *bufferP, struct Datos *buffer)
     if (indice.apuntador == -1)
     {
         //     printf("No hay registros con idOrigen %d\n", origen);
-        bufferP->idOrigen = -1; // Indica que no se encontraron registros
+        bufferP->mediaViaje = -1; // Indica que no se encontraron registros
     }                           // else {
     //     printf("El primer registro con idOrigen %d se encuentra en la posicion %ld del archivo indexado\n", indice.idOrigen, indice.apuntador);
     // }
@@ -119,7 +126,7 @@ void buscarTiempoPormedio(struct Datos *bufferP, struct Datos *buffer)
         exit(EXIT_FAILURE);
     }
 
-    if (bufferP->idOrigen != -1)
+    if (bufferP->mediaViaje != -1)
     {
         fseek(lectura, (indice.apuntador - 1) * sizeof(struct Datos), SEEK_SET);
         fread(buffer, sizeof(struct Datos), 1, lectura);
@@ -131,7 +138,7 @@ void buscarTiempoPormedio(struct Datos *bufferP, struct Datos *buffer)
             if (bufferP->sig == -1)
             {
                 //printf("No hay registros con los parametros indicados\n");
-                bufferP->idOrigen = -1; // Indica que no se encontraron registros
+                bufferP->mediaViaje = -1; // Indica que no se encontraron registros
                 break;
             }
 
@@ -152,11 +159,35 @@ void *atenderCliente(void *datos)
     parametros = (struct Parametros *)datos;
 }
 
+void escrituraLog(char *IP, struct Datos *bufferP, int destInicial) {
+    // Descriptor del archivo log
+    FILE *log;
+
+    if ((log = fopen("log.txt", "at")) == NULL)
+    {
+        perror("No se pudo abrir el archivo log\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Obtener tiempo y convertirlo a estructura
+    time_t rawtime;
+    struct tm *info;
+    time(&rawtime);
+    info = localtime(&rawtime);
+
+    // Escritura en archivo, con ajustes a algunos valores
+    fprintf(log, "[%04d%02d%02d%02d%02d%02d] [%s] [%4.2f - %d - %d]\n", (info->tm_year)+1900,
+        (info->tm_mon)+1, info->tm_mday, info->tm_hour, info->tm_min, info->tm_sec, IP,
+        bufferP->mediaViaje, bufferP->idOrigen, destInicial);
+
+    fclose(log);
+}
+
 int main()
 {
-
     // Estructuras de configuracion de servidor y cliente
     struct sockaddr_in server, client;
+
     // Tamaño de una estructura sockaddr_in
     socklen_t tamano = sizeof(client);
 
@@ -177,6 +208,13 @@ int main()
     // Configura el servidor y acepta los clientes
     configuracionServidor(&clientfd, &serverfd, &server, &client);
 
+    // Inicializa el mutex para bloqueo del archivo log
+    if(pthread_mutex_init(&logLock, NULL) != 0)
+    {
+        perror("Error inicializando mutex\n");
+        exit(-1);
+    }
+    
     while (1)
     {
         // Acepta al cliente y le manda un mensaje de confirmacion
@@ -197,7 +235,7 @@ int main()
                 }
                 if (r <= 0)
                 {
-                    //perror("Error en recv");
+                    // perror("Error en recv");
                     // printf("Cerrando el cliente con ip %s",client.sin_addr.s_addr);
                     break;
                 }
@@ -206,10 +244,10 @@ int main()
                 cantidad = 0;
                 //printf("El origen: %d, el destino: %d, la hora: %d\n", bufferP->idOrigen, bufferP->idDestino, bufferP->hora);
 
-                //_________________________________________________________
+                // Guardado del idDestino inicial antes de que se modifique bufferP en la busqueda
+                int destInicial = bufferP->idDestino;
                 // Se busca el tiempo promedio
-                buscarTiempoPormedio(bufferP, &buffer);
-                //_________________________________________________________
+                buscarTiempoPromedio(bufferP, &buffer);
 
                 // Se envia el tiempo promedio
                 while (cantidad < tamanoBuff)
@@ -223,10 +261,23 @@ int main()
                     perror("Error en send");
                     exit(-1);
                 }
+
+                // Obtener direccion del socket
+                getsockname(clientfd, (struct sockaddr *)&client, &tamano);
+
+                // Obtener ip conectado y escribir en archivo log
+                char clientIP[16];
+                inet_ntop(AF_INET, &client.sin_addr, clientIP, sizeof(clientIP));
+
+                pthread_mutex_lock(&logLock);
+                escrituraLog(clientIP, bufferP, destInicial);
+                pthread_mutex_unlock(&logLock);
             }
-            kill(getpid(),SIGKILL);
+            kill(getpid(),SIGTERM);
         }
     }
+
+    pthread_mutex_destroy(&logLock);
 
     // Se cierra ambos sockets
     close(clientfd);

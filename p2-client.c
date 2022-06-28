@@ -103,6 +103,9 @@ int main()
             scanf("%d", &origen);
             idLugar(&origen); // Revision de valores
             printf("\nEl id ingresado fue %d\n", origen);
+            printf("Oprima cualquier tecla para continuar\n");
+            scanf("%s", &a);
+
             datos.idOrigen = origen;
             break;
 
@@ -111,6 +114,9 @@ int main()
             scanf("%d", &destino);
             idLugar(&destino); // Revision de valores
             printf("\nEl id ingresado fue %d\n", destino);
+            printf("Oprima cualquier tecla para continuar\n");
+            scanf("%s", &a);
+
             datos.idDestino = destino;
             break;
 
@@ -119,15 +125,19 @@ int main()
             scanf("%d", &hora);
             formatoHora(&hora); // Revision de valores
             printf("\nLa hora ingresada fue %d\n", hora);
+            printf("Oprima cualquier tecla para continuar\n");
+            scanf("%s", &a);
+
             datos.hora = hora;
             break;
 
         case 4:
-
+            // Inicializar tiempo promedio
+            datos.mediaViaje = 0;
+            
             // Se envian todos los datos para hacer la consulta
             while (cantidad < tamano)
             {
-
                 r = send(clientefd, buffer + cantidad, tamano, 0);
                 cantidad = cantidad + r;
             }
@@ -166,7 +176,7 @@ int main()
                 exit(-1);
             }
 
-            if (datos.idOrigen == -1)
+            if (datos.mediaViaje == -1)
             {
                 // printf("No hay registros con los parametros indicados\n");
                 printf("NA\n");

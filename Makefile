@@ -1,27 +1,27 @@
 all : ejecutarServidor
 
-ejecutarCliente: compilarCliente cliente
-	./cliente
+ejecutarCliente: compilarCliente p2-client
+	./p2-client
 
-compilarCliente: cliente.c
-	gcc cliente.c -o cliente
+compilarCliente: p2-client.c
+	gcc p2-client.c -o p2-client
 
 
-compilaServidor: servidor.c
-	gcc servidor.c -o servidor
+compilaServidor: p2-server.c
+	gcc p2-server.c -o p2-server
 
 crearTerminal: compilarCliente
-	gnome-terminal -- ./cliente
+	gnome-terminal -- ./p2-client
 
-ejecutarServidor: compilaServidor crearTerminal servidor
-	./servidor
+ejecutarServidor: compilaServidor crearTerminal p2-server
+	./p2-server
 
-compilarIndexador: indexador.c
-	gcc indexador.c -o indexador
+compilarIndexador: p2-index.c
+	gcc p2-index.c -o p2-index
 
-ejecutarIndexador: compilarIndexador indexador
-	./indexador
+ejecutarIndexador: compilarIndexador p2-index
+	./p2-index
 clean: 
-	rm -r servidor cliente
+	rm -r p2-server p2-client log.txt
 cleanIndexador: 
-	rm -r salidaHash salidaIndex indexador
+	rm -r salidaHash salidaIndex p2-index
