@@ -1,4 +1,4 @@
-all : ejecutarServidor crearTerminal
+all : crearTerminal ejecutarServidor
 
 compilarCliente: p2-client.c
 	gcc p2-client.c -o p2-client
