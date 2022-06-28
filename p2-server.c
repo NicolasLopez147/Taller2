@@ -153,12 +153,6 @@ void buscarTiempoPromedio(struct Datos *bufferP, struct Datos *buffer)
     fclose(lectura);
 }
 
-void *atenderCliente(void *datos)
-{
-    struct Parametros *parametros;
-    parametros = (struct Parametros *)datos;
-}
-
 void escrituraLog(char *IP, struct Datos *bufferP, int destInicial) {
     // Descriptor del archivo log
     FILE *log;
